@@ -1,0 +1,17 @@
+{
+"schemaVersion": "1.2",
+"description": "block 80 port",
+"runtimeConfig": {
+   "aws:runShellScript": {
+     "properties": [
+       {
+         "id": "0.aws:runShellScript",
+         "runCommand": [
+           "#!/bin/bash",
+           "iptables -I INPUT -p tcp --dport 80 -j ACCEPT"
+         ]
+       }
+     ]
+   }
+}
+}

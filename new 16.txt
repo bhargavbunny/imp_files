@@ -1,0 +1,12 @@
+"#!/bin/bash -xe\n",
+"sudo apt-get -y install curl\n",
+"sudo apt-get -y install apache2\n", "\n ",
+"echo 'starting from here' \n",
+"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - ",
+"\n",
+"add-apt-repository \" deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable \"",
+"\n",
+"apt-get update -y",
+"#sudo add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable'\n",
+"apt-get install -y docker-ce \n",
+"docker run -it --name bhargav-jenkins -p 80:8080 -p 50000:50000 -v Jenkins-1:/jenkins-1 bhargavbunny94/jenkins-bhargav\n"

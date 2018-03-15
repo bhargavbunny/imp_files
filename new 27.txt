@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: flappybird-prod-deployment
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: flappybird-prod-app
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: flappybird-prod-deployment
+          image: bhargavbunny94/flappybird
+          imagePullPolicy: Always
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+		  ports:
+            - containerPort: 80
+			
+			
+			
+			
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: flappybird-app
+  name: flappybird-app
+spec:
+ type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: php-app

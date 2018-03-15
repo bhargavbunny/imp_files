@@ -1,0 +1,15 @@
+apt-get install npm
+
+apt-get install nodejs-legacy
+
+npm config set unsafe-perm=true
+
+npm install -g aws-sam-local
+
+alias python=python3
+
+apt-get install python3-pip
+
+pip3 install --upgrade pip3
+
+pip3 install --upgrade awscli

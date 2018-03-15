@@ -1,0 +1,49 @@
+{
+  "resources": {
+    "Resources": {
+      "S3Bucket": {
+        "Type": "AWS::S3::Bucket",
+        "Properties": {
+          "BucketName": "pk-bucket"
+        }
+      },
+      "myDefaultRole": {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+          "Path": "/my/default/path",
+          "RoleName": "MyDefaultRole",
+          "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+          },
+          "Policies": [
+            {
+              "PolicyName": "myPolicyName",
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                      "s3:PutObject"
+                    ],
+                    "Resource": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "pk-bucket"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

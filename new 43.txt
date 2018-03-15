@@ -1,0 +1,18 @@
+zip -r cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip lambda_function.py
+
+
+sh 's3Upload(file:\'someFolder\', bucket:\'my-bucket\', path:\'.\')'
+
+
+
+--parameter-overrides CodeUri=s3://cybage-alm-bhargav-ssm/cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip
+
+
+
+sam package --template-file cybage-alm-bhargav-sam-cybagealmbhargavssm-2SG5I6JLNR9U.yaml --s3-bucket cybage-alm-bhargav-ssm --output-template-file packaged.yaml
+
+
+
+sam deploy --template-file ./packaged.yaml --stack-name cybage-alm-bhargav-sam-demo --capabilities CAPABILITY_IAM
+
+sam deploy --template-file ./packaged.yaml --parameter-overrides BucketName=cybage-alm-bhargav-ssm CodeKey=cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip --stack-name cybage-alm-bhargav-sam-demo --capabilities CAPABILITY_IAM

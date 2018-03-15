@@ -1,0 +1,41 @@
+/var/lib/tomcat8/webapps
+
+
+
+EmployeeApplication 
+
+
+
+cd /opt
+
+wget http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+
+sudo tar -xvzf apache-maven-3.3.9-bin.tar.gz
+
+sudo mv apache-maven-3.3.9 maven
+
+export M2_HOME=/opt/maven
+
+
+export M2_HOME=/home/ubuntu/maven/docker-maven/jdk-8/spring-maven-sample/maven
+
+
+export PATH=${M2_HOME}/bin:${PATH}
+
+apt-get update
+
+apt-get -y install default-jdk
+
+apt-get -y install tomcat8
+
+export JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-amd64"
+
+git clone https://github.com/bhargavbunny/EMC-CodeDeploy-poc.git
+
+cd EMC-CodeDeploy-poc
+
+mvn install
+
+cd target
+
+cp EmployeeApplication.war /var/lib/tomcat8/webapps

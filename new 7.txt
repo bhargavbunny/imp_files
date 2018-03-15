@@ -1,0 +1,5 @@
+s3:PutObjectTagging
+s3:PutObjectVersionTagging
+s3:GetObjectVersion
+
+“Tags” : "[ { “Key” : “Type” , “Value” : “Database” } ]" 

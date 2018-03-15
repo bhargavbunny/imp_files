@@ -1,0 +1,1 @@
+while true; do wget -q -O- http://delta-prod-deployment2.default.svc.cluster.local; done

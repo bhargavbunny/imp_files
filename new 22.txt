@@ -1,0 +1,12 @@
+FROM ubuntu
+MAINTAINER Bhargav Reddy K
+
+RUN wget http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+
+RUN tar -xvzf apache-maven-3.3.9-bin.tar.gz
+
+ADD apache-maven-3.3.9 maven
+
+RUN export M2_HOME=/opt/maven
+
+RUN export PATH=${M2_HOME}/bin:${PATH}

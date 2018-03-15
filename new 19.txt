@@ -1,0 +1,12 @@
+node {
+  stage 'Checkout'
+  git 'https://github.com/bhargavbunny/Docker-poc.git'
+ 
+  stage 'Docker build'
+  docker.build('bhargavbunny94/jenkins')
+ 
+  stage 'Docker push'
+  docker.withRegistry('http://289367918005.dkr.ecr.us-east-1.amazonaws.com/bhargavbunny94/jenkins', 'ecr:us-east-1:ecr-credentials') {
+    docker.image('bhargavbunny94/jenkins').push('latest')
+  }
+}

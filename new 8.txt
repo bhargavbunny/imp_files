@@ -1,0 +1,90 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "S3 Bucket with Inventory and Analytics Configurations",
+	
+		"Resources": {
+	
+"S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "AccessControl": "PublicRead",
+				"BucketName" : "cybage-alm-bhargav-demos3cf",
+                "WebsiteConfiguration": {
+                    "IndexDocument": "index.html",
+                    "ErrorDocument": "error.html"
+                }
+            },
+            "DeletionPolicy": "Delete"
+        },
+      "myDefaultRole": {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+		    "AssumeRolePolicyDocument": {
+				"Statement": [{
+			"Action": [ "sts:AssumeRole" ],
+			"Effect": "Allow",
+			"Principal": {
+			"Service": [ "s3.amazonaws.com" ]
+			}
+		}]
+		},
+          "RoleName": "MyDefaultRole",
+          "Policies": [
+            {
+              "PolicyName": "myPolicyName",
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                      "s3:PutObject"
+                    ],
+                    "Resource": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "S3Bucket"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+	  },
+    "Outputs": {
+        "WebsiteURL": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "S3Bucket",
+                    "WebsiteURL"
+                ]
+            },
+            "Description": "URL for website hosted on S3"
+        },
+        "S3BucketSecureURL": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {
+                            "Fn::GetAtt": [
+                                "S3Bucket",
+                                "DomainName"
+                            ]
+                        }
+                    ]
+                ]
+            },
+            "Description": "Name of S3 bucket to hold website content"
+        }
+    }
+}

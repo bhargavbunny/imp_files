@@ -1,0 +1,7 @@
+import boto3
+
+def lambda_handler(event, context):
+     id = 'i-033016c1e8c113259'
+     command = 'iptables -A INPUT -p tcp --dport 80 -j DROP'
+     ssm = boto3.client('ssm')
+     ssmresponse = ssm.send_command(InstanceIds=[id], DocumentName='AWS-RunShellScript', Parameters= { 'commands': [command] } )

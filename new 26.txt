@@ -1,0 +1,12 @@
+node {
+  stage ('Checkout')
+  git 'https://github.com/bhargavbunny/cybage-alm-flappybird.git'
+ 
+  stage ('Docker build')
+  docker.build('cybage-alm-bhargav-fb-ecr')
+ 
+  stage ('Docker push')
+  docker.withRegistry('http://543816070942.dkr.ecr.us-east-1.amazonaws.com/cybage-alm-bhargav-fb-ecr', 'ecr:us-east-1:cybage-alm-bhargav-credentials') {
+    docker.image('cybage-alm-bhargav-fb-ecr').push('3')
+  }
+} 

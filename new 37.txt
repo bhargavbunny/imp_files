@@ -1,0 +1,15 @@
+import boto3
+import time
+
+def lambda_handler(event, context):
+    ssmClient = boto3.client('ssm')
+    instanceId = "i-033016c1e8c113259"
+    message = event['Records'][0]['Sns']['Message']
+    if message == "yes":
+        print("Message From SNS: " + message)
+        ssmCommand = ssmClient.send_command(InstanceIds=[instanceId],DocumentName='cybage-bhargav-block-port',Comment='bhargav-reddy',OutputS3BucketName="bhargav-alm-ssm")
+    elif message == "no":
+        print("Message From SNS: " + message)
+        ssmCommand = ssmClient.send_command(InstanceIds=[instanceId],DocumentName='cybage-alm-bhargav-allow-port',Comment='bhargav-reddy',OutputS3BucketName="bhargav-alm-ssm")
+    else:
+        ssmCommand = ssmClient.send_command(InstanceIds=[instanceId],DocumentName='cybage-alm-bhargav-allow-port',Comment='bhargav-reddy',OutputS3BucketName="bhargav-alm-ssm")

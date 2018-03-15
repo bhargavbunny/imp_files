@@ -1,0 +1,169 @@
+
+		"PublicLoadBalancer": {
+			"Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+			"Properties": {
+				"Scheme": "internet-facing",
+				"Name": "adcelerate-dev-public-alb",
+				"Subnets": [{
+					"Ref": "PublicSubnet1"
+				}, {
+					"Ref": "PublicSubnet2"
+				}],
+				"LoadBalancerAttributes": [{
+					"Key": "idle_timeout.timeout_seconds",
+					"Value": "50"
+				}],
+				"SecurityGroups": [{
+					"Ref": "LoadBalancerPublicSecurityGroup"
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-public-alb"
+				}]
+			}
+		},
+		"AdcelerateDevEcsAsg": {
+			"Type": "AWS::AutoScaling::AutoScalingGroup",
+			"Properties": {
+				"VPCZoneIdentifier": [{
+					"Ref": "PrivateSubnet1"
+				}, {
+					"Ref": "PrivateSubnet2"
+				}],
+				"LaunchConfigurationName": {
+					"Ref": "AdcelerateDevEcsClusterLaunchConfig"
+				},
+				"MinSize": "1",
+				"MaxSize": {
+					"Ref": "MaxSize"
+				},
+				"DesiredCapacity": {
+					"Ref": "DesiredCapacity"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-ecs-cluster",
+					"PropagateAtLaunch": "true"
+				}]
+			},
+			"CreationPolicy": {
+				"ResourceSignal": {
+					"Timeout": "PT15M"
+				}
+			},
+
+			"UpdatePolicy": {
+				"AutoScalingReplacingUpdate": {
+					"WillReplace": "true"
+				}
+			}
+		},
+		"AdcelerateDevEcsClusterLaunchConfig": {
+			"Type": "AWS::AutoScaling::LaunchConfiguration",
+			"Properties": {
+				"ImageId": "ami-04351e12",
+				"SecurityGroups": [{
+					"Ref": "DentsuDevEcsSecurityGroup"
+				}],
+				"InstanceType": {
+					"Ref": "EcsInstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "EcsIamRoleInstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyName"
+				},
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"", [
+								"#!/bin/bash -xe\n",
+								"echo ECS_CLUSTER=",
+								{
+									"Ref": "EcsDevCLuster"
+								},
+								" >> /etc/ecs/ecs.config\n",
+								"yum install -y aws-cfn-bootstrap\n",
+								"/opt/aws/bin/cfn-signal -e $? ",
+								"         --stack ",
+								{
+									"Ref": "AWS::StackName"
+								},
+								"         --resource AdcelerateDevEcsAsg ",
+								"         --region ",
+								{
+									"Ref": "AWS::Region"
+								},
+								"\n"
+							]
+						]
+					}
+				}
+			}
+		},
+		"EcsIamRoleInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [{
+					"Ref": "EcsIamRole"
+				}]
+			}
+		},
+		"AdcelrateDevAlbListner": {
+			"Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"Properties": {
+				"LoadBalancerArn": {
+					"Ref": "PublicLoadBalancer"
+				},
+				"Port": "80",
+				"Protocol": "HTTP",
+				"DefaultActions": [{
+					"Type": "forward",
+					"TargetGroupArn": {
+						"Ref": "AdcelrateDevALBTargetGroup"
+					}
+				}]
+			}
+		},
+		"AdcelrateDevAlbListnerRule": {
+			"Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+			"DependsOn": "AdcelrateDevAlbListner",
+			"Properties": {
+				"ListenerArn": {
+					"Ref": "AdcelrateDevAlbListner"
+				},
+				"Actions": [{
+					"Type": "forward",
+					"TargetGroupArn": {
+						"Ref": "AdcelrateDevALBTargetGroup"
+					}
+				}],
+				"Conditions": [{
+					"Field": "path-pattern",
+					"Values": [
+						"/*"
+					]
+				}],
+				"Priority": 1
+			}
+		},
+		"AdcelrateDevALBTargetGroup": {
+			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+			"DependsOn": "PublicLoadBalancer",
+			"Properties": {
+				"Name": "AdcelrateDevALBTargetGroup",
+				"HealthCheckIntervalSeconds": 10,
+				"HealthCheckPath": "/",
+				"HealthCheckProtocol": "HTTPS",
+				"HealthCheckTimeoutSeconds": 5,
+				"HealthyThresholdCount": 2,
+				"Port": 80,
+				"Protocol": "HTTPS",
+				"UnhealthyThresholdCount": 2,
+				"VpcId": {
+					"Ref": "VpcID"
+				}
+			}
+		},

@@ -1,0 +1,14 @@
+3,4,6,8,9,11,12
+
+Kent state university
+Lawrence Technological University
+Northern Arizona University
+Northwest Missouri state University
+Oklahoma city University
+Suny New paltz
+Tennessee Tech University
+west Texas A&M university
+University of Bridgeport
+
+170 136
+166	141

@@ -1,0 +1,17 @@
+response = client.send_command(
+    InstanceIds=[
+        '',
+    ],
+    Targets=[
+        {
+            'Key': 'string',
+            'Values': [
+                'string',
+            ]
+        },
+    ],
+    DocumentName='string',
+    DocumentHash='string',
+    DocumentHashType='Sha256'|'Sha1',
+    TimeoutSeconds=123,
+    Comment='string',)

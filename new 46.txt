@@ -1,0 +1,21 @@
+Nlyte_poller
+via_impression
+mInsights-EMS
+LaunchDM
+Delphi-FDC
+MTV-Mobile-Andriod
+Integration
+Taken1
+Marketware
+
+
+Infogroup-Yesmail-Express-Canada
+videology
+ESM
+
+
+
+curl "http://35.168.23.0:8086/query?q=SHOW+USERS&db=_internal"{"results":[{"series":[{"columns":["user","admin"],"values":[["admin",true],["hostpresto",false]]}]}]}
+\
+
+curl "http://35.168.23.0:8086/query?q=SHOW+USERS&db=_internal&pretty=true"{"error":"unable to parse Basic Auth credentials"}

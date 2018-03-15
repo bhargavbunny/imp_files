@@ -1,0 +1,12 @@
+node {
+  stage ("Checkout"){
+        git 'https://github.com/swatimag/Food_app.git'
+  }
+  stage ("CI-process and zipping"){
+        sh 'zip -r cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip lambda_function.py'
+  }
+  stage ("push to s3"){
+        sh 's3Upload(file:\'cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip\', bucket:\'cybage-alm-bhargav-ssm\', path:\'.\')'
+        }
+  }
+}

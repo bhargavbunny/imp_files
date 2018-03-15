@@ -1,0 +1,1140 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Adcelerate Dev VPC",
+	"Parameters": {
+		"VpcID": {
+			"Type": "AWS::EC2::VPC::Id",
+			"Default": "",
+			"Description": "Select a VPC ID for Devlopment Enviorment"
+		},
+		"EcsClusterName": {
+			"Type": "String",
+			"Description": "ECS Cluster Name",
+			"Default": "adcelerate-dev-ecs-cluster"
+		},
+
+		"DevPublicSubnet1": {
+			"Description": "The IP address range used to create Public Subnet 1",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"ContainerTaskRoleArn": {
+			"Description": "IAM Role for container task to access database",
+			"Type": "String",
+			"Default": ""
+		},
+		"DockerImageURL": {
+			"Description": "Full ECR Repository link",
+			"Type": "String",
+			"Default": ""
+		},
+		"DevPublicSubnet2": {
+			"Description": "The IP address range used to create Public Subnet 2",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"DevPrivateSubnet1": {
+			"Description": "The IP address range used to create Private Subnet 1",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"DevPrivateSubnet2": {
+			"Description": "The IP address range used to create Private Subnet 2",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"DBPassword": {
+			"NoEcho": "true",
+			"Description": "The database admin account password .Master Password must be at least eight characters long:excluding: Special Characters",
+			"Type": "String",
+			"MinLength": "8"
+		},
+		"DBClass": {
+			"Description": "Database instance class",
+			"Type": "String",
+			"AllowedValues": ["db.t2.micro", "db.m1.small", "db.m1.large", "db.m1.xlarge", "db.m2.xlarge"],
+			"ConstraintDescription": "must select a valid database instance type."
+		},
+		"EcsIamRole": {
+			"Description": "IAM Role to register instances to cluster",
+			"Type": "String",
+			"Default": ""
+		},
+		"EcsInstanceType": {
+			"Type": "String",
+			"Description": "ECS EC2 instance type",
+			"Default": "t2.micro",
+			"AllowedValues": [
+				"t2.nano",
+				"t2.micro",
+				"t2.small",
+				"t2.medium",
+				"t2.large",
+				"m4.large",
+				"m4.xlarge",
+				"m4.2xlarge",
+				"m4.4xlarge",
+				"m4.10xlarge",
+				"m3.medium",
+				"m3.large",
+				"m3.xlarge",
+				"m3.2xlarge",
+				"c4.large",
+				"c4.xlarge",
+				"c4.2xlarge",
+				"c4.4xlarge",
+				"c4.8xlarge",
+				"c3.large",
+				"c3.xlarge",
+				"c3.2xlarge",
+				"c3.4xlarge",
+				"c3.8xlarge",
+				"r3.large",
+				"r3.xlarge",
+				"r3.2xlarge",
+				"r3.4xlarge",
+				"r3.8xlarge",
+				"i2.xlarge",
+				"i2.2xlarge",
+				"i2.4xlarge",
+				"i2.8xlarge"
+			],
+			"ConstraintDescription": "must be a valid EC2 instance type."
+		},
+		"DesiredCapacity": {
+			"Type": "Number",
+			"Default": "1",
+			"Description": "Number of instances to launch in your ECS cluster."
+		},
+		"MaxSize": {
+			"Type": "Number",
+			"Default": "1",
+			"Description": "Maximum number of instances that can be launched in your ECS cluster."
+		},
+
+		"DBAllocatedStorage": {
+			"Default": "5",
+			"Description": "The size of the database (Gb)",
+			"Type": "Number",
+			"MinValue": "5",
+			"MaxValue": "6144",
+			"ConstraintDescription": "must be between 5+"
+		},
+		"KeyName": {
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"Default": "",
+			"Description": "Name of an existing EC2 KeyPair to enable SSH access to the Bastion instance."
+		}
+	},
+	"Resources": {
+		"S3Bucket": {
+			"Type": "AWS::S3::Bucket",
+			"Properties": {
+				"BucketName": {
+					"Fn::Join": [
+						"-", [
+							"adcelerate",
+							{
+								"Ref": "VpcID"
+							},
+							"logs"
+						]
+					]
+				},
+				"AccessControl": "Private"
+			}
+
+		},
+		"EcsDevCLuster": {
+			"Type": "AWS::ECS::Cluster",
+			"Properties": {
+				"ClusterName": {
+					"Ref": "EcsClusterName"
+				}
+			}
+		},
+		"DentsuDevEcrRepo": {
+			"Type": "AWS::ECR::Repository",
+			"Properties": {
+				"RepositoryName": "adcelerate-dev-ecr-repo"
+			}
+		},
+		"AdcelerateDevEcsServiceRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": [
+								"ecs.amazonaws.com"
+							]
+						},
+						"Action": [
+							"sts:AssumeRole"
+						]
+					}]
+				},
+				"ManagedPolicyArns": [
+					"arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
+				]
+			}
+		},
+		"InternetGateway": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-IG"
+				}]
+			}
+		},
+		"VPCGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"InternetGatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"PublicSubnet1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "us-east-1a",
+				"CidrBlock": {
+					"Fn::Join": [
+						"", [{
+							"Ref": "DevPublicSubnet1"
+						}]
+					]
+				},
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"MapPublicIpOnLaunch": "true",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-public-Subnet-1a"
+				}]
+			}
+		},
+		"PublicSubnet2": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "us-east-1c",
+				"CidrBlock": {
+					"Fn::Join": [
+						"", [{
+							"Ref": "DevPublicSubnet2"
+						}]
+					]
+				},
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"MapPublicIpOnLaunch": "true",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-Public-Subnet-1c"
+				}]
+			}
+		},
+		"PrivateSubnet1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "us-east-1a",
+				"CidrBlock": {
+					"Fn::Join": [
+						"", [{
+							"Ref": "DevPrivateSubnet1"
+						}]
+					]
+				},
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"MapPublicIpOnLaunch": "false",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-private-subnet-1a"
+				}]
+			}
+		},
+		"PrivateSubnet2": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "us-east-1c",
+				"CidrBlock": {
+					"Fn::Join": [
+						"", [{
+							"Ref": "DevPrivateSubnet2"
+						}]
+					]
+				},
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"MapPublicIpOnLaunch": "false",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-private-subnet-1c"
+				}]
+			}
+		},
+		"PrivateRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-private-route-table"
+				}]
+			}
+		},
+		"PublicRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-public-route-table"
+				}]
+			}
+		},
+		"PublicRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSubnet1"
+				},
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"PublicRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSubnet2"
+				},
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"PrivateRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSubnet1"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"PrivateRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSubnet2"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"PublicRoute": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": "VPCGatewayAttachment",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"PrivateRoute": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": "VPCGatewayAttachment",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"NatGatewayId": {
+					"Ref": "PublicNatGateway"
+				}
+			}
+		},
+		"PublicNatGateway": {
+			"Type": "AWS::EC2::NatGateway",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": ["NatEIP", "AllocationId"]
+				},
+				"SubnetId": {
+					"Ref": "PublicSubnet1"
+				}
+			}
+		},
+		"NatEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"NetworkAcl": {
+			"Type": "AWS::EC2::NetworkAcl",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				}
+			}
+		},
+		"PublicNetworkAclAssociation1": {
+			"Type": "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSubnet1"
+				},
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				}
+			}
+		},
+		"PublicNetworkAclAssociation": {
+			"Type": "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSubnet2"
+				},
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				}
+			}
+		},
+		"PrivateNetworkAclAssociation1": {
+			"Type": "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSubnet1"
+				},
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				}
+			}
+		},
+		"PrivateNetworkAclAssociation2": {
+			"Type": "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSubnet2"
+				},
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				}
+			}
+		},
+		"NetworkAclEntryIncoming": {
+			"Type": "AWS::EC2::NetworkAclEntry",
+			"Properties": {
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				},
+				"RuleNumber": "100",
+				"Protocol": "-1",
+				"RuleAction": "allow",
+				"Egress": "false",
+				"CidrBlock": "0.0.0.0/0"
+			}
+		},
+		"NetworkAclEntryOutgoing": {
+			"Type": "AWS::EC2::NetworkAclEntry",
+			"Properties": {
+				"NetworkAclId": {
+					"Ref": "NetworkAcl"
+				},
+				"RuleNumber": "100",
+				"Protocol": "-1",
+				"RuleAction": "allow",
+				"Egress": "true",
+				"CidrBlock": "0.0.0.0/0"
+			}
+		},
+		"JenkinMasterSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG of Jenkins Master",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-JenkinsMaster-SG"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "22",
+					"ToPort": "22",
+					"CidrIp": "0.0.0.0/0"
+				}, {
+					"IpProtocol": "tcp",
+					"FromPort": "80",
+					"ToPort": "80",
+					"CidrIp": "0.0.0.0/0"
+				}, {
+					"IpProtocol": "tcp",
+					"FromPort": "8080",
+					"ToPort": "8080",
+					"CidrIp": "0.0.0.0/0"
+				}, {
+					"IpProtocol": "tcp",
+					"FromPort": "2049",
+					"ToPort": "2049",
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"DentsuDBSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for Database",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-DB-SG"
+				}],
+				"SecurityGroupIngress": [{
+						"IpProtocol": "tcp",
+						"FromPort": "5432",
+						"ToPort": "5432",
+						"SourceSecurityGroupId": {
+							"Ref": "DentsuDevEcsSecurityGroup"
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5432",
+						"ToPort": "5432",
+						"SourceSecurityGroupId": {
+							"Ref": "DentsuDevEcsSecurityGroup"
+						}
+					}
+				],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"JenkinsSLaveSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for jenkins Slave",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-JenkinSlave-SG"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"LoadBalancerPublicSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for Public Load Balancer Slave",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-Public-LB-SG"
+				}],
+				"SecurityGroupIngress": [{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"DentsuDevEcsSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for Database",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-ECS-SG"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"RedShiftSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for RedShift Instance",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-Redshift-SG"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "5432",
+					"ToPort": "5432",
+					"SourceSecurityGroupId": {
+						"Ref": "BastionSecurityGroup"
+					}
+				}, {
+					"IpProtocol": "tcp",
+					"FromPort": "5432",
+					"ToPort": "5432",
+					"SourceSecurityGroupId": {
+						"Ref": "DentsuDevEcsSecurityGroup"
+					}
+				}],
+
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"EFSSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-efs-sg"
+				}],
+				"GroupDescription": "Security group for mount target",
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "2049",
+					"ToPort": "2049",
+					"SourceSecurityGroupId": {
+						"Ref": "JenkinMasterSecurityGroup"
+					}
+				}]
+			}
+		},
+		"BastionSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "SG for Dev Bastion Instance",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-Bastion-SG"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "22",
+					"ToPort": "22",
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "-1",
+					"FromPort": "0",
+					"ToPort": "65535",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},
+		"BastionInstance": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": "ami-a4c7edb2",
+				"InstanceType": "t2.micro",
+				"NetworkInterfaces": [{
+					"AssociatePublicIpAddress": "true",
+					"DeviceIndex": "0",
+					"GroupSet": [{
+						"Ref": "BastionSecurityGroup"
+					}],
+					"SubnetId": {
+						"Ref": "PublicSubnet1"
+					}
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-bastion-instance"
+				}],
+				"KeyName": {
+					"Ref": "KeyName"
+				}
+			}
+		},
+		"BastionEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"InstanceId": {
+					"Ref": "BastionInstance"
+				},
+				"Domain": "vpc"
+			}
+		},
+		"EFSFileSystem": {
+			"Type": "AWS::EFS::FileSystem",
+			"Properties": {
+				"PerformanceMode": "generalPurpose",
+				"FileSystemTags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-efs"
+				}]
+			}
+		},
+		"MountTarget1": {
+			"Type": "AWS::EFS::MountTarget",
+			"Properties": {
+				"FileSystemId": {
+					"Ref": "EFSFileSystem"
+				},
+				"SubnetId": {
+					"Ref": "PublicSubnet1"
+				},
+				"SecurityGroups": [{
+					"Ref": "EFSSecurityGroup"
+				}]
+			}
+		},
+		"MountTarget2": {
+			"Type": "AWS::EFS::MountTarget",
+			"Properties": {
+				"FileSystemId": {
+					"Ref": "EFSFileSystem"
+				},
+				"SubnetId": {
+					"Ref": "PublicSubnet2"
+				},
+				"SecurityGroups": [{
+					"Ref": "EFSSecurityGroup"
+				}]
+			}
+		},
+		"DentsuAppLogGroup": {
+			"Type": "AWS::Logs::LogGroup",
+			"Properties": {
+				"LogGroupName": "adcelerate-dev-app-log-group"
+			}
+		},
+		"RDSubnetGroup": {
+			"Type": "AWS::RDS::DBSubnetGroup",
+			"Properties": {
+				"DBSubnetGroupDescription": "Subnets available for the RDS DB Instance",
+				"SubnetIds": [{
+					"Ref": "PrivateSubnet1"
+				}, {
+					"Ref": "PrivateSubnet2"
+				}]
+			}
+		},
+		"PublicLoadBalancer": {
+			"Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+			"Properties": {
+				"Scheme": "internet-facing",
+				"Name": "adcelerate-dev-public-alb",
+				"Subnets": [{
+					"Ref": "PublicSubnet1"
+				}, {
+					"Ref": "PublicSubnet2"
+				}],
+				"LoadBalancerAttributes": [{
+					"Key": "idle_timeout.timeout_seconds",
+					"Value": "50"
+				}],
+				"SecurityGroups": [{
+					"Ref": "LoadBalancerPublicSecurityGroup"
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-public-alb"
+				}]
+			}
+		},
+		"ApplicationPgsqlDB": {
+			"Type": "AWS::RDS::DBInstance",
+			"Properties": {
+				"AllocatedStorage": {
+					"Ref": "DBAllocatedStorage"
+				},
+				"DBInstanceClass": {
+					"Ref": "DBClass"
+				},
+				"Engine": "postgres",
+				"EngineVersion": "9.6.2",
+				"MasterUsername": "root",
+				"MasterUserPassword": {
+					"Ref": "DBPassword"
+				},
+				"Port": "5432",
+				"DBName": "test",
+				"DBInstanceIdentifier": "adcelerate-dev-app-db",
+				"AvailabilityZone": "us-east-1a",
+				"StorageType": "standard",
+				"BackupRetentionPeriod": "1",
+				"PreferredBackupWindow": "16:30-17:30",
+				"PreferredMaintenanceWindow": "Sun:18:30-Sun:19:30",
+				"VPCSecurityGroups": [{
+					"Fn::GetAtt": [
+						"DentsuDBSecurityGroup",
+						"GroupId"
+					]
+				}],
+				"DBSubnetGroupName": {
+					"Ref": "RDSubnetGroup"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-application-db"
+				}]
+			}
+		},
+		"AdcelerateDevEcsAsg": {
+			"Type": "AWS::AutoScaling::AutoScalingGroup",
+			"Properties": {
+				"VPCZoneIdentifier": [{
+					"Ref": "PrivateSubnet1"
+				}, {
+					"Ref": "PrivateSubnet2"
+				}],
+				"LaunchConfigurationName": {
+					"Ref": "AdcelerateDevEcsClusterLaunchConfig"
+				},
+				"MinSize": "1",
+				"MaxSize": {
+					"Ref": "MaxSize"
+				},
+				"DesiredCapacity": {
+					"Ref": "DesiredCapacity"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "adcelerate-dev-ecs-cluster",
+					"PropagateAtLaunch": "true"
+				}]
+			},
+			"CreationPolicy": {
+				"ResourceSignal": {
+					"Timeout": "PT15M"
+				}
+			},
+
+			"UpdatePolicy": {
+				"AutoScalingReplacingUpdate": {
+					"WillReplace": "true"
+				}
+			}
+		},
+		"AdcelerateDevEcsClusterLaunchConfig": {
+			"Type": "AWS::AutoScaling::LaunchConfiguration",
+			"Properties": {
+				"ImageId": "ami-04351e12",
+				"SecurityGroups": [{
+					"Ref": "DentsuDevEcsSecurityGroup"
+				}],
+				"InstanceType": {
+					"Ref": "EcsInstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "EcsIamRoleInstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyName"
+				},
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"", [
+								"#!/bin/bash -xe\n",
+								"echo ECS_CLUSTER=",
+								{
+									"Ref": "EcsDevCLuster"
+								},
+								" >> /etc/ecs/ecs.config\n",
+								"yum install -y aws-cfn-bootstrap\n",
+								"/opt/aws/bin/cfn-signal -e $? ",
+								"         --stack ",
+								{
+									"Ref": "AWS::StackName"
+								},
+								"         --resource AdcelerateDevEcsAsg ",
+								"         --region ",
+								{
+									"Ref": "AWS::Region"
+								},
+								"\n"
+							]
+						]
+					}
+				}
+			}
+		},
+		"EcsIamRoleInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [{
+					"Ref": "EcsIamRole"
+				}]
+			}
+		},
+		"AdcelrateDevAlbListner": {
+			"Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"Properties": {
+				"LoadBalancerArn": {
+					"Ref": "PublicLoadBalancer"
+				},
+				"Port": "81",
+				"Protocol": "HTTP",
+				"DefaultActions": [{
+					"Type": "forward",
+					"TargetGroupArn": {
+						"Ref": "AdcelrateDevALBTargetGroup"
+					}
+				}]
+			}
+		},
+		"AdcelrateDevAlbListnerRule": {
+			"Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+			"DependsOn": "AdcelrateDevAlbListner",
+			"Properties": {
+				"ListenerArn": {
+					"Ref": "AdcelrateDevAlbListner"
+				},
+				"Actions": [{
+					"Type": "forward",
+					"TargetGroupArn": {
+						"Ref": "AdcelrateDevALBTargetGroup"
+					}
+				}],
+				"Conditions": [{
+					"Field": "path-pattern",
+					"Values": [
+						"/*"
+					]
+				}],
+				"Priority": 1
+			}
+		},
+		"AdcelrateDevALBTargetGroup": {
+			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+			"DependsOn": "PublicLoadBalancer",
+			"Properties": {
+				"Name": "AdcelrateDevALBTargetGroup",
+				"HealthCheckIntervalSeconds": 10,
+				"HealthCheckPath": "/",
+				"HealthCheckProtocol": "HTTPS",
+				"HealthCheckTimeoutSeconds": 5,
+				"HealthyThresholdCount": 2,
+				"Port": 443,
+				"Protocol": "HTTPS",
+				"UnhealthyThresholdCount": 2,
+				"VpcId": {
+					"Ref": "VpcID"
+				}
+			}
+		},
+
+		"AdcelrateDevWebAppTaskDefinition": {
+			"Type": "AWS::ECS::TaskDefinition",
+			"Properties": {
+				"Family": "Adcelerate-dev-webapp-family",
+				"TaskRoleArn": {
+					"Ref": "ContainerTaskRoleArn"
+				},
+				"ContainerDefinitions": [{
+					"Name": "adcelrate-dev-web-task",
+					"Image": {
+						"Ref": "DockerImageURL"
+					},
+					"Memory": "500",
+					"Cpu": "256",
+					"Essential": true,
+					"PortMappings": [{
+						"ContainerPort": "443",
+						"Protocol": "tcp"
+					}],
+					"Environment": [{
+							"Name": "RDS_USERNAME",
+							"Value": "root"
+						}, {
+							"Name": "RDS_HOSTNAME",
+							"Value": "jdbc:postgresql://adcelerate-dev-app-db.c67s4iypdqef.us-east-1.rds.amazonaws.com:5432/adcelerate"
+						},
+						{
+							"Name": "RDS_PASS",
+							"Value": "32ofpyz3"
+						},
+						{
+							"Name": "SERVER_HOSTNAME",
+							"Value": "adcelerate-dev-public-alb-270417474.us-east-1.elb.amazonaws.com"
+						}
+					]
+				}]
+			}
+		},
+		"AdcelearteDevWebService": {
+			"Type": "AWS::ECS::Service",
+			"DependsOn": "AdcelrateDevAlbListner",
+			"Properties": {
+				"Cluster": {
+					"Ref": "EcsDevCLuster"
+				},
+				"DesiredCount": "1",
+				"LoadBalancers": [{
+					"ContainerName": "adcelrate-dev-web-task",
+					"ContainerPort": "443",
+					"TargetGroupArn": {
+						"Ref": "AdcelrateDevALBTargetGroup"
+					}
+				}],
+				"DeploymentConfiguration": {
+					"MaximumPercent": 200,
+					"MinimumHealthyPercent": 0
+				},
+				"Role": {
+					"Ref": "AdcelerateDevEcsServiceRole"
+				},
+				"TaskDefinition": {
+					"Ref": "AdcelrateDevWebAppTaskDefinition"
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"JDBCConnectionString": {
+			"Description": "JDBC connection string for database",
+			"Value": {
+				"Fn::Join": ["", ["jdbc:postgresql://",
+					{
+						"Fn::GetAtt": ["ApplicationPgsqlDB", "Endpoint.Address"]
+					},
+					":",
+					{
+						"Fn::GetAtt": ["ApplicationPgsqlDB", "Endpoint.Port"]
+					}
+
+				]]
+			}
+		},
+
+		"PrivateSubnet1": {
+			"Description": "The subnet ID to use for public web servers",
+			"Value": {
+				"Ref": "PrivateSubnet1"
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-SubnetID1"
+				}
+			}
+		},
+		"PrivateSubnet2": {
+			"Description": "The subnet ID to use for public web servers",
+			"Value": {
+				"Ref": "PrivateSubnet2"
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-SubnetID2"
+				}
+			}
+		},
+		"RedshiftClusterSecurityGroupName": {
+			"Description": "Name of cluster security group",
+			"Value": {
+				"Fn::GetAtt": ["RedShiftSecurityGroup", "GroupId"]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-SecurityGroupID"
+				}
+			}
+		}
+	}
+}
+
