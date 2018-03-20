@@ -1,0 +1,15 @@
+node {
+  stage ('Checkout')
+  git 'https://github.com/bhargavbunny/cybage-alm-flappybird.git'
+ 
+  stage ('Docker build')
+  docker.build('cybage-alm-bhargav-flappybird-ecr')
+  
+  stage ('ecr-login'){
+  sh ('eval `aws ecr get-login --region us-east-1 | sed -e \'s/-e none//g\'`')
+  }
+  stage ('Docker push')
+  docker.withRegistry('http://543816070942.dkr.ecr.us-east-1.amazonaws.com/cybage-alm-bhargav-flappybird-ecr','ecr:us-east-1:bhargav-cybage-alm-cred') {
+    docker.image('cybage-alm-bhargav-flappybird-ecr').push('latest')
+  }
+} 

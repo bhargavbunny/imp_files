@@ -1,0 +1,19 @@
+node {
+  stage ("Checkout"){
+        git 'https://github.com/bhargavbunny/cybage-alm-bhargav-sam-demo.git'
+  }
+  stage ("CI-process and zipping"){
+        sh 'zip -r cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip lambda_function.py'
+  }
+  stage ("push to s3"){
+        sh 'aws s3 cp cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip s3://cybage-alm-bhargav-ssm'
+        }
+  stage ("sam-packaging"){
+        sh 'rm -f packaged.yaml'
+        sh 'sam package --template-file cybage-alm-bhargav-sam-cybagealmbhargavssm-2SG5I6JLNR9U.yaml --s3-bucket cybage-alm-bhargav-ssm --output-template-file packaged.yaml'
+        }
+  stage ("sam-deploy"){
+        sh 'echo s3://cybage-alm-bhargav-ssm/cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip '
+        sh 'sam deploy --template-file ./packaged.yaml --parameter-overrides BucketName=cybage-alm-bhargav-ssm CodeKey=cybage-alm-bhargav-sam-${BUILD_NUMBER}.zip version=QA --stack-name cybage-alm-bhargav-sam-demo --capabilities CAPABILITY_IAM'
+        }
+  }

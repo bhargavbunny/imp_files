@@ -1,0 +1,20 @@
+kubernetes:
+
+Setting a namespace as a default one - 
+	kubectl config set-context $(kubectl config current-context) --namespace=<insert-namespace-name-here>
+	kubectl config view | grep namespace:
+	
+	
+	
+Configuring a readness and liveliness 
+
+		readinessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    livenessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 15
+      periodSeconds: 20

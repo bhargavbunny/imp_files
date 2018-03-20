@@ -1,0 +1,12 @@
+node {
+  stage ('Checkout')
+  git 'https://github.com/bhargavbunny/cybage-alm-bhargav-DemoApplication.git'
+ 
+  stage ('Docker build')
+  docker.build('cyabge-alm-bhargav-demo')
+ 
+  stage ('Docker push')
+  docker.withRegistry('http://543816070942.dkr.ecr.us-east-1.amazonaws.com/cyabge-alm-bhargav-demo', 'ecr:us-east-1:cybage-alm-bhargav-credentials') {
+    docker.image('cyabge-alm-bhargav-demo').push('12')
+  }
+}
